@@ -4,21 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Wizard's Chess 3D — Gothic Cathedral Edition</title>
-    <script src="https://quge5.com/88/tag.min.js" data-zone="298711" async data-cfasync="false"></script>
-    <script>(function(s){s.dataset.zone='12076206',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+    
+    <!-- Monetag: Push Notifications (Zone 12076210) -->
     <script src="https://5gvci.com/act/files/tag.min.js?z=12076210" data-cfasync="false" async></script>
+
+    <!-- Monetag: In-Page Push Banner (Zone 12076214) -->
     <script>(function(s){s.dataset.zone='12076214',s.src='https://nap5k.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+
+    <!-- Monetag: Vignette Banner Interstitial (Zone 12076216) -->
+    <script>(function(s){s.dataset.zone='12076216',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9985499149731378" crossorigin="anonymous"></script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Crimson+Pro:ital,wght@0,500;0,700;1,500&family=Plus+Jakarta+Sans:wght@500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,1,0" rel="stylesheet" />
-    <script>(function(s){s.dataset.zone='12076216',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))</script>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
-
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9985499149731378"
-     crossorigin="anonymous"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -619,7 +625,21 @@
                 <p id="gameover-subtitle" class="text-sm font-serif italic text-stone-200 leading-relaxed">
                     The Marble Host triumphs in the Gothic Sanctuary.
                 </p>
-                <div class="pt-3 flex flex-wrap items-center justify-center gap-3">
+
+                <!-- High-Impact Endgame Reliquary Ad Banner Slot (Non-Intrusive, High CPM) -->
+                <div id="endgame-ad-slot" class="w-full min-h-[90px] rounded-xl bg-black/40 border border-amber-500/20 p-2 flex flex-col items-center justify-center overflow-hidden my-2">
+                    <ins class="adsbygoogle"
+                         style="display:block; width:100%; min-height:90px;"
+                         data-ad-client="ca-pub-9985499149731378"
+                         data-ad-slot="auto"
+                         data-ad-format="auto"
+                         data-full-width-responsive="true"></ins>
+                    <script>
+                         try { (adsbygoogle = window.adsbygoogle || []).push({}); } catch(e){}
+                    </script>
+                </div>
+
+                <div class="pt-2 flex flex-wrap items-center justify-center gap-3">
                     <button id="btn-modal-new" class="skeuo-btn active-toggle px-6 py-2.5 rounded-xl font-display font-bold text-xs uppercase tracking-wider">
                         Forge New Match
                     </button>
@@ -1662,6 +1682,11 @@
                 this.mouse = new THREE.Vector2();
                 this.clock = new THREE.Clock();
 
+                // Device Detection & Adaptive Mobile GPU Calibration
+                const ua = navigator.userAgent || '';
+                this.isMobile = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua) || (window.innerWidth < 768);
+                this.isAndroid = /Android/i.test(ua);
+
                 this.initThree();
                 this.initMaterials();
                 this.initSharedSpiraGeometries();
@@ -1686,15 +1711,17 @@
                     140
                 );
 
+                const maxDpr = this.isAndroid ? 1.25 : (this.isMobile ? 1.5 : 2.0);
                 this.renderer = new THREE.WebGLRenderer({
-                    antialias: true,
+                    antialias: !this.isAndroid,
                     powerPreference: 'high-performance',
-                    logarithmicDepthBuffer: false
+                    logarithmicDepthBuffer: false,
+                    precision: this.isAndroid ? 'mediump' : 'highp'
                 });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
-                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
                 this.renderer.shadowMap.enabled = true;
-                this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                this.renderer.shadowMap.type = this.isMobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
                 this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
                 // Calibrated exposure so white alabaster pieces retain deep midtone & crevice contrast
                 this.renderer.toneMappingExposure = 0.96;
@@ -1758,8 +1785,9 @@
                 this.moonLight = new THREE.DirectionalLight(0xf8fafc, 1.35);
                 this.moonLight.position.set(15, 26, 14);
                 this.moonLight.castShadow = true;
-                this.moonLight.shadow.mapSize.width = 2048;
-                this.moonLight.shadow.mapSize.height = 2048;
+                const shadowRes = this.isMobile ? 1024 : 2048;
+                this.moonLight.shadow.mapSize.width = shadowRes;
+                this.moonLight.shadow.mapSize.height = shadowRes;
                 this.moonLight.shadow.camera.near = 2;
                 this.moonLight.shadow.camera.far = 45;
                 const d = 13.5;
@@ -2162,9 +2190,14 @@
                             flame.position.set(sconceX + inwardDir * 0.25, 7.0, zPos);
                             cathedral.add(flame);
 
-                            const torchLight = new THREE.PointLight(0xff9933, 0.85, 28, 1.8);
-                            torchLight.position.copy(flame.position);
-                            cathedral.add(torchLight);
+                            // Mobile Performance Optimization: Only create dynamic PointLight for nearest center torches
+                            // while maintaining all 8 glowing 3D flame meshes for full visual fidelity
+                            let torchLight = null;
+                            if (!this.isMobile || Math.abs(zPos) <= 6) {
+                                torchLight = new THREE.PointLight(0xff9933, this.isMobile ? 1.05 : 0.85, 28, 1.8);
+                                torchLight.position.copy(flame.position);
+                                cathedral.add(torchLight);
+                            }
                             this.torches.push({
                                 light: torchLight,
                                 flameMesh: flame,
@@ -2188,8 +2221,8 @@
                 roseWindowSouth.rotation.y = Math.PI;
                 cathedral.add(roseWindowSouth);
 
-                // Floating Cathedral Dust Motes / Arcane Spores
-                const particleCount = 260;
+                // Floating Cathedral Dust Motes / Arcane Spores (Calibrated for mobile efficiency)
+                const particleCount = this.isMobile ? 110 : 260;
                 const posArray = new Float32Array(particleCount * 3);
                 for (let i = 0; i < particleCount; i++) {
                     posArray[i * 3] = (Math.random() - 0.5) * 44;
@@ -2592,7 +2625,12 @@
                     type: 'piece',
                     pieceType: type,
                     color: color,
-                    seed: Math.random() * Math.PI * 2
+                    seed: Math.random() * Math.PI * 2,
+                    sculptBody: bodyGroup,
+                    headPart: headGroup,
+                    weaponPart: weaponGroup,
+                    shieldPart: shieldGroup,
+                    floatingOrb: headGroup.getObjectByName('floatingOrb') || bodyGroup.getObjectByName('floatingOrb') || null
                 };
 
                 return group;
@@ -3691,6 +3729,8 @@
                 }
 
                 this.camera.updateProjectionMatrix();
+                const maxDpr = this.isAndroid ? 1.25 : (this.isMobile ? 1.5 : 2.0);
+                this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
                 this.renderer.setSize(w, h);
             }
 
@@ -3712,6 +3752,13 @@
 
             bindEvents() {
                 const dom = this.renderer.domElement;
+
+                // Event Shield: Ensure piece clicks and board drags NEVER bubble to external ad click listeners
+                ['click', 'touchend'].forEach((evtName) => {
+                    dom.addEventListener(evtName, (e) => {
+                        e.stopPropagation();
+                    }, { capture: true });
+                });
 
                 // Multi-touch & Pointer Down (Supports 1-finger Orbit + 2-finger Pinch Zoom)
                 dom.addEventListener('pointerdown', (e) => {
@@ -3978,10 +4025,10 @@
                     this.pieceGroups.forEach((group, sq) => {
                         const seed = group.userData.seed || 0;
                         const pType = group.userData.pieceType;
-                        const body = group.getObjectByName('sculptBody');
-                        const head = group.getObjectByName('headPart');
-                        const weapon = group.getObjectByName('weaponPart');
-                        const shield = group.getObjectByName('shieldPart');
+                        const body = group.userData.sculptBody || group.getObjectByName('sculptBody');
+                        const head = group.userData.headPart || group.getObjectByName('headPart');
+                        const weapon = group.userData.weaponPart || group.getObjectByName('weaponPart');
+                        const shield = group.userData.shieldPart || group.getObjectByName('shieldPart');
                         const isSelected = sq === this.selectedSquare;
 
                         if (body) {
@@ -4017,7 +4064,7 @@
                             shield.position.y = 0.96 + Math.cos(elapsed * 2.2 + seed) * 0.025;
                         }
 
-                        const floatingOrb = group.getObjectByName('floatingOrb');
+                        const floatingOrb = group.userData.floatingOrb || group.getObjectByName('floatingOrb');
                         if (floatingOrb) {
                             floatingOrb.rotation.y += dt * 2.1;
                             floatingOrb.rotation.x += dt * 0.8;
@@ -4084,7 +4131,9 @@
                 // 6. Cathedral Torchlight Flicker & Floating Dust Motes
                 this.torches.forEach((t) => {
                     const flicker = Math.sin(elapsed * 7.5 + t.phase) * 0.12 + Math.cos(elapsed * 13.0 + t.phase) * 0.08;
-                    t.light.intensity = 0.85 + flicker;
+                    if (t.light) {
+                        t.light.intensity = (this.isMobile ? 1.05 : 0.85) + flicker;
+                    }
                     t.flameMesh.position.y = t.baseY + flicker * 0.25;
                     t.flameMesh.rotation.y += dt * 2.5;
                 });
