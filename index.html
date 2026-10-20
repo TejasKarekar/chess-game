@@ -652,6 +652,11 @@
     </div>
 
     <script>
+        // Global Mobile & Hardware Device Detection
+        const _UA = typeof navigator !== 'undefined' ? (navigator.userAgent || '') : '';
+        const IS_MOBILE = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(_UA) || (typeof window !== 'undefined' && window.innerWidth < 768);
+        const IS_ANDROID = /Android/i.test(_UA);
+
         /**
          * Procedural Web Audio Synthesizer for Tactile Skeuomorphic Wizard's Chess
          * Synthesizes mechanical brass plunger clicks, heavy stone grinding, knight leaps,
@@ -1045,8 +1050,8 @@
                 fluteEndV = 0.83
             } = options;
 
-            const radialSegs = 96;
-            const heightSegs = 76;
+            const radialSegs = IS_MOBILE ? 28 : 96;
+            const heightSegs = IS_MOBILE ? 20 : 76;
             const positions = [];
             const colors = [];
             const uvs = [];
@@ -1180,8 +1185,8 @@
                 bulbous = false
             } = options;
 
-            const radialSegs = 84;
-            const heightSegs = 32;
+            const radialSegs = IS_MOBILE ? 28 : 84;
+            const heightSegs = IS_MOBILE ? 16 : 32;
             const positions = [];
             const colors = [];
             const uvs = [];
@@ -1252,8 +1257,8 @@
          * and dark recessed interior cleft shading.
          */
         function createBishopMitreGeometry() {
-            const radialSegs = 72;
-            const heightSegs = 44;
+            const radialSegs = IS_MOBILE ? 24 : 72;
+            const heightSegs = IS_MOBILE ? 16 : 44;
             const height = 0.64;
             const maxRadius = 0.39;
             const positions = [];
@@ -1320,8 +1325,8 @@
          * plus baked crevice shading in the eyes, nostrils, jaw groove, and mane scallops.
          */
         function createSpiraKnightHeadGeometry(facingDir = -1) {
-            const radialSegs = 72;
-            const heightSegs = 60;
+            const radialSegs = IS_MOBILE ? 24 : 72;
+            const heightSegs = IS_MOBILE ? 18 : 60;
             const height = 1.24;
             const positions = [];
             const colors = [];
@@ -1702,7 +1707,11 @@
             initThree() {
                 this.scene = new THREE.Scene();
                 this.scene.background = new THREE.Color(0x090b10);
-                this.scene.fog = new THREE.FogExp2(0x090b10, 0.0135);
+                if (this.isMobile) {
+                    this.scene.fog = new THREE.Fog(0x090b10, 16, 70);
+                } else {
+                    this.scene.fog = new THREE.FogExp2(0x090b10, 0.0135);
+                }
 
                 this.camera = new THREE.PerspectiveCamera(
                     42,
@@ -1711,7 +1720,7 @@
                     140
                 );
 
-                const maxDpr = this.isAndroid ? 1.25 : (this.isMobile ? 1.5 : 2.0);
+                const maxDpr = this.isAndroid ? 1.0 : (this.isMobile ? 1.25 : 2.0);
                 this.renderer = new THREE.WebGLRenderer({
                     antialias: !this.isAndroid,
                     powerPreference: 'high-performance',
@@ -1720,8 +1729,15 @@
                 });
                 this.renderer.setSize(window.innerWidth, window.innerHeight);
                 this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
-                this.renderer.shadowMap.enabled = true;
-                this.renderer.shadowMap.type = this.isMobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+
+                if (this.isAndroid) {
+                    // On Android: Grounding contact-shadow rings + vertex AO provide perfect depth without GPU shadow bottleneck
+                    this.renderer.shadowMap.enabled = false;
+                } else {
+                    this.renderer.shadowMap.enabled = true;
+                    this.renderer.shadowMap.type = this.isMobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
+                    this.renderer.shadowMap.autoUpdate = !this.isMobile;
+                }
                 this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
                 // Calibrated exposure so white alabaster pieces retain deep midtone & crevice contrast
                 this.renderer.toneMappingExposure = 0.96;
@@ -1817,63 +1833,102 @@
                 const spiraMarbleTex = createSpiraStoneTexture(true);
                 const spiraObsidianTex = createSpiraStoneTexture(false);
 
-                // Sculpted Alabaster-Ivory SpiraChess Material (White Pieces)
-                // Uses vertexColors (baked AO in spiral flutes & rings) + bumpMap so white pieces have deep 3D shading
-                this.marbleMaterial = new THREE.MeshPhysicalMaterial({
-                    map: spiraMarbleTex,
-                    bumpMap: spiraMarbleTex,
-                    bumpScale: 0.016,
-                    color: 0xe8e4dc,
-                    vertexColors: true,
-                    roughness: 0.22,
-                    metalness: 0.06,
-                    clearcoat: 0.88,
-                    clearcoatRoughness: 0.10,
-                    reflectivity: 0.85,
-                    envMapIntensity: 0.65
-                });
+                if (this.isMobile) {
+                    // Mobile-Optimized Ultra-Fast PBR Materials: MeshStandardMaterial without heavy clearcoat & bumpMap derivatives
+                    // Uses vertexColors (baked AO in spiral flutes & rings) so 3D sculptural depth is 100% preserved at silky 60 FPS
+                    this.marbleMaterial = new THREE.MeshStandardMaterial({
+                        map: spiraMarbleTex,
+                        color: 0xe8e4dc,
+                        vertexColors: true,
+                        roughness: 0.28,
+                        metalness: 0.04,
+                        envMapIntensity: 0.65
+                    });
 
-                // Shaded Pewter-Ivory Accent for White Finials & Rings
-                this.marbleAccentMaterial = new THREE.MeshPhysicalMaterial({
-                    map: spiraMarbleTex,
-                    color: 0xd6d1c7,
-                    vertexColors: true,
-                    roughness: 0.24,
-                    metalness: 0.12,
-                    clearcoat: 0.85,
-                    clearcoatRoughness: 0.12,
-                    envMapIntensity: 0.65
-                });
+                    this.marbleAccentMaterial = new THREE.MeshStandardMaterial({
+                        map: spiraMarbleTex,
+                        color: 0xd6d1c7,
+                        vertexColors: true,
+                        roughness: 0.30,
+                        metalness: 0.10,
+                        envMapIntensity: 0.65
+                    });
 
-                // High-Gloss Lacquered Volcanic Obsidian SpiraChess Material (Black Pieces)
-                this.obsidianMaterial = new THREE.MeshPhysicalMaterial({
-                    map: spiraObsidianTex,
-                    bumpMap: spiraObsidianTex,
-                    bumpScale: 0.012,
-                    color: 0x161822,
-                    vertexColors: true,
-                    roughness: 0.08,
-                    metalness: 0.55,
-                    clearcoat: 1.0,
-                    clearcoatRoughness: 0.05,
-                    reflectivity: 1.0,
-                    envMapIntensity: 1.35,
-                    emissive: 0x130a24,
-                    emissiveIntensity: 0.16
-                });
+                    this.obsidianMaterial = new THREE.MeshStandardMaterial({
+                        map: spiraObsidianTex,
+                        color: 0x161822,
+                        vertexColors: true,
+                        roughness: 0.12,
+                        metalness: 0.60,
+                        envMapIntensity: 1.25,
+                        emissive: 0x130a24,
+                        emissiveIntensity: 0.16
+                    });
 
-                // Obsidian Finial Accent Material
-                this.obsidianAccentMaterial = new THREE.MeshPhysicalMaterial({
-                    color: 0x26293a,
-                    vertexColors: true,
-                    roughness: 0.10,
-                    metalness: 0.68,
-                    clearcoat: 1.0,
-                    clearcoatRoughness: 0.06,
-                    envMapIntensity: 1.4,
-                    emissive: 0x3b0764,
-                    emissiveIntensity: 0.22
-                });
+                    this.obsidianAccentMaterial = new THREE.MeshStandardMaterial({
+                        color: 0x26293a,
+                        vertexColors: true,
+                        roughness: 0.14,
+                        metalness: 0.70,
+                        envMapIntensity: 1.25,
+                        emissive: 0x3b0764,
+                        emissiveIntensity: 0.20
+                    });
+                } else {
+                    // Desktop High-End PBR Materials with Clearcoat & Bump Mapping
+                    this.marbleMaterial = new THREE.MeshPhysicalMaterial({
+                        map: spiraMarbleTex,
+                        bumpMap: spiraMarbleTex,
+                        bumpScale: 0.016,
+                        color: 0xe8e4dc,
+                        vertexColors: true,
+                        roughness: 0.22,
+                        metalness: 0.06,
+                        clearcoat: 0.88,
+                        clearcoatRoughness: 0.10,
+                        reflectivity: 0.85,
+                        envMapIntensity: 0.65
+                    });
+
+                    this.marbleAccentMaterial = new THREE.MeshPhysicalMaterial({
+                        map: spiraMarbleTex,
+                        color: 0xd6d1c7,
+                        vertexColors: true,
+                        roughness: 0.24,
+                        metalness: 0.12,
+                        clearcoat: 0.85,
+                        clearcoatRoughness: 0.12,
+                        envMapIntensity: 0.65
+                    });
+
+                    this.obsidianMaterial = new THREE.MeshPhysicalMaterial({
+                        map: spiraObsidianTex,
+                        bumpMap: spiraObsidianTex,
+                        bumpScale: 0.012,
+                        color: 0x161822,
+                        vertexColors: true,
+                        roughness: 0.08,
+                        metalness: 0.55,
+                        clearcoat: 1.0,
+                        clearcoatRoughness: 0.05,
+                        reflectivity: 1.0,
+                        envMapIntensity: 1.35,
+                        emissive: 0x130a24,
+                        emissiveIntensity: 0.16
+                    });
+
+                    this.obsidianAccentMaterial = new THREE.MeshPhysicalMaterial({
+                        color: 0x26293a,
+                        vertexColors: true,
+                        roughness: 0.10,
+                        metalness: 0.68,
+                        clearcoat: 1.0,
+                        clearcoatRoughness: 0.06,
+                        envMapIntensity: 1.4,
+                        emissive: 0x3b0764,
+                        emissiveIntensity: 0.22
+                    });
+                }
 
                 // Warm Muted Limestone-Parchment Light Board Tiles (contrasts against white alabaster pieces)
                 this.lightTileMat = new THREE.MeshStandardMaterial({
@@ -1913,6 +1968,13 @@
              * Pre-computes all parametric SpiraChess geometries once for fast instancing
              */
             initSharedSpiraGeometries() {
+                const sSeg = IS_MOBILE ? 16 : 36;
+                const sRing = IS_MOBILE ? 12 : 28;
+                const finialSeg = IS_MOBILE ? 12 : 20;
+                const finialRing = IS_MOBILE ? 10 : 16;
+                const domeSeg = IS_MOBILE ? 16 : 28;
+                const domeRing = IS_MOBILE ? 12 : 20;
+
                 this.sharedPieceGeometries = {
                     pawnBody: createSpiraBodyGeometry({
                         height: 1.36,
@@ -1923,7 +1985,7 @@
                         fluteDepth: 0.095,
                         doubleCollar: false
                     }),
-                    pawnHead: applyPrimitiveVertexShading(new THREE.SphereGeometry(0.39, 36, 28), 0.66, 1.0),
+                    pawnHead: applyPrimitiveVertexShading(new THREE.SphereGeometry(0.39, sSeg, sRing), 0.66, 1.0),
 
                     rookBody: createSpiraBodyGeometry({
                         height: 1.48,
@@ -1968,7 +2030,7 @@
                         doubleCollar: true
                     }),
                     bishopMitre: createBishopMitreGeometry(),
-                    bishopFinial: applyPrimitiveVertexShading(new THREE.SphereGeometry(0.11, 20, 16), 0.70, 1.0),
+                    bishopFinial: applyPrimitiveVertexShading(new THREE.SphereGeometry(0.11, finialSeg, finialRing), 0.70, 1.0),
 
                     queenBody: createSpiraBodyGeometry({
                         height: 1.88,
@@ -1989,11 +2051,11 @@
                         bulbous: false
                     }),
                     queenDome: applyPrimitiveVertexShading(
-                        new THREE.SphereGeometry(0.28, 28, 20, 0, Math.PI * 2, 0, Math.PI * 0.65),
+                        new THREE.SphereGeometry(0.28, domeSeg, domeRing, 0, Math.PI * 2, 0, Math.PI * 0.65),
                         0.68,
                         1.0
                     ),
-                    queenFinial: applyPrimitiveVertexShading(new THREE.SphereGeometry(0.12, 20, 16), 0.70, 1.0),
+                    queenFinial: applyPrimitiveVertexShading(new THREE.SphereGeometry(0.12, finialSeg, finialRing), 0.70, 1.0),
 
                     kingBody: createSpiraBodyGeometry({
                         height: 2.06,
@@ -2014,12 +2076,12 @@
                         bulbous: false
                     }),
                     kingDome: applyPrimitiveVertexShading(
-                        new THREE.SphereGeometry(0.30, 28, 20, 0, Math.PI * 2, 0, Math.PI * 0.6),
+                        new THREE.SphereGeometry(0.30, domeSeg, domeRing, 0, Math.PI * 2, 0, Math.PI * 0.6),
                         0.68,
                         1.0
                     ),
-                    kingFinialBase: applyPrimitiveVertexShading(new THREE.ConeGeometry(0.14, 0.22, 20), 0.68, 1.0),
-                    kingFinialTop: applyPrimitiveVertexShading(new THREE.SphereGeometry(0.11, 20, 16), 0.72, 1.0)
+                    kingFinialBase: applyPrimitiveVertexShading(new THREE.ConeGeometry(0.14, 0.22, finialSeg), 0.68, 1.0),
+                    kingFinialTop: applyPrimitiveVertexShading(new THREE.SphereGeometry(0.11, finialSeg, finialRing), 0.72, 1.0)
                 };
             }
 
@@ -3729,7 +3791,7 @@
                 }
 
                 this.camera.updateProjectionMatrix();
-                const maxDpr = this.isAndroid ? 1.25 : (this.isMobile ? 1.5 : 2.0);
+                const maxDpr = this.isAndroid ? 1.0 : (this.isMobile ? 1.25 : 2.0);
                 this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, maxDpr));
                 this.renderer.setSize(w, h);
             }
@@ -4020,56 +4082,72 @@
                     }
                 });
 
-                // 3. Articulated Multi-Part Idle Animations on All 32 Sculpted Pieces
+                // 3. Articulated Multi-Part Idle Animations on Pieces
                 if (!this.isAnimating) {
-                    this.pieceGroups.forEach((group, sq) => {
-                        const seed = group.userData.seed || 0;
-                        const pType = group.userData.pieceType;
-                        const body = group.userData.sculptBody || group.getObjectByName('sculptBody');
-                        const head = group.userData.headPart || group.getObjectByName('headPart');
-                        const weapon = group.userData.weaponPart || group.getObjectByName('weaponPart');
-                        const shield = group.userData.shieldPart || group.getObjectByName('shieldPart');
-                        const isSelected = sq === this.selectedSquare;
-
-                        if (body) {
-                            const breathOffset = Math.sin(elapsed * 2.2 + seed) * 0.04;
-                            // Selected piece levitates prominently so mobile fingers never obscure it
-                            const targetY = isSelected ? 0.55 + breathOffset * 1.5 : breathOffset;
-                            body.position.y += (targetY - body.position.y) * 0.16;
-
-                            if (isSelected) {
-                                body.rotation.y += dt * 1.2;
-                            } else {
-                                body.rotation.y += (Math.sin(elapsed * 0.7 + seed) * 0.06 - body.rotation.y) * 0.1;
+                    if (this.isMobile) {
+                        // Mobile 60 FPS Optimization: Only animate the actively selected piece to eliminate 150+ matrix calculations per frame
+                        if (this.selectedSquare) {
+                            const group = this.pieceGroups.get(this.selectedSquare);
+                            if (group) {
+                                const body = group.userData.sculptBody || group.getObjectByName('sculptBody');
+                                if (body) {
+                                    const breathOffset = Math.sin(elapsed * 2.2) * 0.04;
+                                    const targetY = 0.55 + breathOffset * 1.5;
+                                    body.position.y += (targetY - body.position.y) * 0.16;
+                                    body.rotation.y += dt * 1.2;
+                                }
                             }
                         }
+                    } else {
+                        // Desktop Full Multi-Part Idle Animations on All 32 Pieces
+                        this.pieceGroups.forEach((group, sq) => {
+                            const seed = group.userData.seed || 0;
+                            const pType = group.userData.pieceType;
+                            const body = group.userData.sculptBody || group.getObjectByName('sculptBody');
+                            const head = group.userData.headPart || group.getObjectByName('headPart');
+                            const weapon = group.userData.weaponPart || group.getObjectByName('weaponPart');
+                            const shield = group.userData.shieldPart || group.getObjectByName('shieldPart');
+                            const isSelected = sq === this.selectedSquare;
 
-                        // Articulated Head Scanning / Crown Levitation
-                        if (head) {
-                            if (pType === 'q' || pType === 'r') {
-                                head.rotation.y += dt * 0.65;
-                            } else {
-                                head.rotation.y = Math.sin(elapsed * 1.3 + seed) * 0.18;
+                            if (body) {
+                                const breathOffset = Math.sin(elapsed * 2.2 + seed) * 0.04;
+                                const targetY = isSelected ? 0.55 + breathOffset * 1.5 : breathOffset;
+                                body.position.y += (targetY - body.position.y) * 0.16;
+
+                                if (isSelected) {
+                                    body.rotation.y += dt * 1.2;
+                                } else {
+                                    body.rotation.y += (Math.sin(elapsed * 0.7 + seed) * 0.06 - body.rotation.y) * 0.1;
+                                }
                             }
-                        }
 
-                        // Subtle Weapon & Staff Sway
-                        if (weapon) {
-                            weapon.rotation.z = Math.sin(elapsed * 1.8 + seed) * 0.06;
-                            weapon.position.y += Math.sin(elapsed * 2.5 + seed) * 0.0008;
-                        }
+                            // Articulated Head Scanning / Crown Levitation
+                            if (head) {
+                                if (pType === 'q' || pType === 'r') {
+                                    head.rotation.y += dt * 0.65;
+                                } else {
+                                    head.rotation.y = Math.sin(elapsed * 1.3 + seed) * 0.18;
+                                }
+                            }
 
-                        // Shield Breathing Guard
-                        if (shield) {
-                            shield.position.y = 0.96 + Math.cos(elapsed * 2.2 + seed) * 0.025;
-                        }
+                            // Subtle Weapon & Staff Sway
+                            if (weapon) {
+                                weapon.rotation.z = Math.sin(elapsed * 1.8 + seed) * 0.06;
+                                weapon.position.y += Math.sin(elapsed * 2.5 + seed) * 0.0008;
+                            }
 
-                        const floatingOrb = group.userData.floatingOrb || group.getObjectByName('floatingOrb');
-                        if (floatingOrb) {
-                            floatingOrb.rotation.y += dt * 2.1;
-                            floatingOrb.rotation.x += dt * 0.8;
-                        }
-                    });
+                            // Shield Breathing Guard
+                            if (shield) {
+                                shield.position.y = 0.96 + Math.cos(elapsed * 2.2 + seed) * 0.025;
+                            }
+
+                            const floatingOrb = group.userData.floatingOrb || group.getObjectByName('floatingOrb');
+                            if (floatingOrb) {
+                                floatingOrb.rotation.y += dt * 2.1;
+                                floatingOrb.rotation.x += dt * 0.8;
+                            }
+                        });
+                    }
                 }
 
                 // 4. Update Shattered Stone Fragments (Gravity, Tile Clatter Bounce, Persistent Rubble)
